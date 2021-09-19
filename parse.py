@@ -12,12 +12,21 @@ CANDIDATES_TABLE_HEADER = [
     "| Округ | ФИО кандидата | Партия |",
     "| ----- | ------------- | ------ |"
 ]
-DISTRICT_TITLE_REGEX = '^#\\s*<a\\s+name=".*"></a>\\s*'
+DISTRICT_TITLE_REGEX = '^#\\s*<a\\s+\\w+=".*"></a>\\s*'
 
 DUMPERS = {
-    "json": lambda data: json.dumps(data, separators=(*",:",)).encode(),
-    "yaml": lambda data: yaml.dump(data, sort_keys=False).encode(),
-    "bson": bson.dumps
+    "json": lambda data, args: json.dumps(
+        data,
+        separators=(",", ": ") if args["beautify"] else (*",:",),
+        indent=2 if args["beautify"] else None,
+        ensure_ascii=args["ascii"],
+    ).encode(),
+    "yaml": lambda data, args: yaml.dump(
+        data,
+        allow_unicode=not args["ascii"],
+        sort_keys=False
+    ).encode(),
+    "bson": lambda data, args: bson.dumps(data)
 }
 
 
@@ -43,6 +52,16 @@ def get_args(args):
         help="output file format: "
         + "|".join(DUMPERS.keys())
         + " (default: json)"
+    )
+    parser.add_argument(
+        "-a", "--ascii", action="store_true",
+        default=False, help="if specified, forces ascii encoding on output "
+        "(with \\uXXXX sequences for utf8 sequences)"
+    )
+    parser.add_argument(
+        "-b", "--beautify", action="store_true",
+        default=False, help="if specified, indents the output for readability "
+        "(where applicable)"
     )
 
     return parser.parse_args(args)
@@ -118,11 +137,11 @@ def parse_lines(lines):
     return result
 
 
-def write_result(data, out_file, format):
+def write_result(data, out_file, format, args):
     if format not in DUMPERS:
         raise ValueError("invalid format; retry with -h")
 
-    output = DUMPERS[format](data)
+    output = DUMPERS[format](data, args)
 
     if out_file.endswith("." + format):
         out_file = out_file[:-len(format) - 1]
@@ -140,7 +159,12 @@ def main():  # pragma: no cover
     with open(args.in_file) as fd:
         *lines, = map(str.strip, fd.readlines())
 
-        write_result(parse_lines(lines), args.out_file, args.format)
+        write_result(
+            parse_lines(lines),
+            args.out_file,
+            args.format,
+            args.__dict__
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover
