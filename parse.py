@@ -82,11 +82,11 @@ def parse_candidate(result, line, current_district, i):
     try:
         id, station = entries[0].split(" ", 1)
         id = int(id)
-
-        if id in result["candidates"]:
-            return warn(i, f"Duplicate station ID {id}. Skipping candidate.")
     except ValueError:
         return warn(i, "Failed to parse station ID. Skipping candidate.")
+
+    if id in result["candidates"]:
+        return warn(i, f"Duplicate station ID {id}. Skipping candidate.")
 
     candidate, party = entries[1:]
 
