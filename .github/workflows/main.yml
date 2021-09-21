@@ -1,0 +1,55 @@
+name: CI
+
+on: [ push, pull_request ]
+
+env:
+  FILE: parse.py
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.x"]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest coverage
+
+      - name: Run unit tests
+        run: coverage run --source=. -m pytest -s tests/*
+          && coverage report -m ${{env.FILE}}
+
+  coding-style:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.x"]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install flake8
+
+      - name: Check coding style
+        run: flake8 --max-line-length=80 --exclude .git,__pycache__,tests
